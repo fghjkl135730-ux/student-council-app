@@ -88,6 +88,7 @@ export default function RootLayout() {
             <Stack.Screen name="meetings/index" />
             <Stack.Screen name="meetings/new" />
             <Stack.Screen name="meetings/new-entry" />
+            <Stack.Screen name="meetings/action-items" />
             <Stack.Screen name="meetings/[id]" />
           </Stack>
           <StatusBar style="auto" />

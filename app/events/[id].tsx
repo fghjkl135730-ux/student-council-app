@@ -359,14 +359,43 @@ const styles = StyleSheet.create({
   taskContent: {
     flex: 1,
   },
+  taskTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   taskTitle: {
     fontSize: 14,
     fontWeight: '600',
+    flex: 1,
+  },
+  sourceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+    gap: 2,
+  },
+  sourceText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  taskMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  taskDeadline: {
+    fontSize: 12,
   },
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
+    minWidth: 60,
+    alignItems: 'center',
   },
   statusText: {
     fontSize: 12,

@@ -28,7 +28,10 @@ export interface Task {
   title: string;
   department: Department;
   status: TaskStatus;
-  checklistKey: ChecklistItemKey;
+  checklistKey?: ChecklistItemKey;  // 스마트 체크리스트에서 생성된 경우만 존재
+  source?: 'checklist' | 'meeting';  // 출처: 체크리스트 또는 회의록
+  meetingId?: string;  // 회의록에서 생성된 경우 회의록 ID
+  deadline?: string;  // 기한 (회의록 액션 아이템에서 추출)
   createdAt: string; // ISO string
   updatedAt: string;
 }

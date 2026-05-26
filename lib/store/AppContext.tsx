@@ -10,6 +10,7 @@ import {
   ChecklistItemKey,
   TaskStatus,
   FacilityStatus,
+  Department,
 } from '../types';
 import { CHECKLIST_ITEMS } from '../constants';
 
@@ -36,6 +37,7 @@ type AppAction =
   | { type: 'ADD_MEETING'; payload: Meeting }
   | { type: 'UPDATE_MEETING'; payload: Meeting }
   | { type: 'DELETE_MEETING'; payload: string }
+  | { type: 'ADD_ACTION_ITEMS_TO_EVENT'; payload: { eventId: string; meetingId: string; actionItems: Array<{ task: string; assignee: string; deadline?: string; department?: string }> } }
   | { type: 'SET_LOADING'; payload: boolean };
 
 // ===== 리듀서 =====
@@ -121,6 +123,33 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'DELETE_MEETING':
       return { ...state, meetings: state.meetings.filter((m) => m.id !== action.payload) };
 
+    case 'ADD_ACTION_ITEMS_TO_EVENT': {
+      const { eventId, meetingId, actionItems } = action.payload;
+      return {
+        ...state,
+        events: state.events.map((e) => {
+          if (e.id !== eventId) return e;
+          const newTasks: Task[] = actionItems.map((item) => ({
+            id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+            eventId,
+            title: item.task,
+            department: (item.department as Department) || 'planning',
+            status: 'pending' as const,
+            source: 'meeting' as const,
+            meetingId,
+            deadline: item.deadline,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }));
+          return {
+            ...e,
+            tasks: [...e.tasks, ...newTasks],
+            updatedAt: new Date().toISOString(),
+          };
+        }),
+      };
+    }
+
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
 
@@ -157,6 +186,7 @@ interface AppContextValue {
   addMeeting: (meeting: Meeting) => void;
   updateMeeting: (meeting: Meeting) => void;
   deleteMeeting: (id: string) => void;
+  addActionItemsToEvent: (eventId: string, meetingId: string, actionItems: Array<{ task: string; assignee: string; deadline?: string; department?: string }>) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -296,6 +326,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'DELETE_MEETING', payload: id });
   }, []);
 
+  const addActionItemsToEvent = useCallback(
+    (eventId: string, meetingId: string, actionItems: Array<{ task: string; assignee: string; deadline?: string; department?: string }>) => {
+      dispatch({ type: 'ADD_ACTION_ITEMS_TO_EVENT', payload: { eventId, meetingId, actionItems } });
+    },
+    []
+  );
+
   return (
     <AppContext.Provider
       value={{
@@ -310,6 +347,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addMeeting,
         updateMeeting,
         deleteMeeting,
+        addActionItemsToEvent,
       }}
     >
       {children}

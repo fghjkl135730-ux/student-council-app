@@ -75,6 +75,24 @@ export default function NewMeetingEntryScreen() {
       Alert.alert('입력 오류', '회의록 내용을 입력해주세요.');
       return;
     }
+
+    // AI 요약이 있고 액션 아이템이 있으면 연동 화면으로 이동
+    if (summary && summary.actionItems && summary.actionItems.length > 0) {
+      const meetingId = generateId();
+      router.push({
+        pathname: '/meetings/action-items',
+        params: {
+          meetingId,
+          meetingTitle: title.trim(),
+          meetingDate: date,
+          meetingContent: content,
+          actionItems: JSON.stringify(summary.actionItems),
+        },
+      });
+      return;
+    }
+
+    // AI 요약이 없으면 그냥 저장
     const now = new Date().toISOString();
     const meeting: Meeting = {
       id: generateId(),
