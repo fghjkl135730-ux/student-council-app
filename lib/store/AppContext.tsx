@@ -275,20 +275,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const now = new Date().toISOString();
       const eventId = generateId();
 
-      // 업무 자동 생성
-      const tasks: Task[] = data.checklist.map((key) => {
-        const item = CHECKLIST_ITEMS[key];
-        return {
-          id: generateId(),
-          eventId,
-          title: item.taskTitle,
-          department: item.department,
-          status: 'pending' as const,
-          checklistKey: key,
-          createdAt: now,
-          updatedAt: now,
-        };
-      });
+      // 업무 자동 생성 (venue_rental 제외)
+      const tasks: Task[] = data.checklist
+        .filter((key) => key !== 'venue_rental')
+        .map((key) => {
+          const item = CHECKLIST_ITEMS[key];
+          return {
+            id: generateId(),
+            eventId,
+            title: item.taskTitle,
+            department: item.department,
+            status: 'pending' as const,
+            checklistKey: key,
+            createdAt: now,
+            updatedAt: now,
+          };
+        });
 
       const event: Event = {
         id: eventId,

@@ -38,7 +38,7 @@ export const CHECKLIST_ITEMS: Record<
   },
   venue_rental: {
     label: '장소 대여 신청',
-    department: 'planning',
+    department: null as any,
     taskTitle: '장소 대여 신청',
     autoRegisterFacility: true,
   },

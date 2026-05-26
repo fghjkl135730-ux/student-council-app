@@ -284,8 +284,8 @@ describe('Improvements v1.1', () => {
       };
 
       expect(finalEvent.tasks).toHaveLength(2);
-      expect(finalEvent.tasks[0].meetingId).toBe(meeting.id);
-      expect(finalEvent.tasks[1].meetingId).toBeUndefined();
+      expect(finalEvent.tasks[0].source).toBe('meeting');
+      expect(finalEvent.tasks[1].source).toBeUndefined();
     });
   });
 });
