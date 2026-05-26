@@ -9,22 +9,64 @@ type IconMapping = Record<SymbolViewProps["name"], ComponentProps<typeof Materia
 type IconSymbolName = keyof typeof MAPPING;
 
 /**
- * Add your SF Symbols to Material Icons mappings here.
- * - see Material Icons in the [Icons Directory](https://icons.expo.fyi).
- * - see SF Symbols in the [SF Symbols](https://developer.apple.com/sf-symbols/) app.
+ * SF Symbols to Material Icons mappings
  */
 const MAPPING = {
+  // 기존
   "house.fill": "home",
   "paperplane.fill": "send",
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
-} as IconMapping;
+  // 탭 아이콘
+  "calendar": "calendar-today",
+  "calendar.fill": "event",
+  "building.2": "business",
+  "building.2.fill": "business",
+  "ellipsis": "more-horiz",
+  "ellipsis.circle": "more-horiz",
+  "ellipsis.circle.fill": "more-horiz",
+  // 행사 관련
+  "plus": "add",
+  "plus.circle.fill": "add-circle",
+  "pencil": "edit",
+  "trash": "delete",
+  "checkmark": "check",
+  "checkmark.circle": "check-circle-outline",
+  "checkmark.circle.fill": "check-circle",
+  "xmark": "close",
+  "xmark.circle.fill": "cancel",
+  // 문서
+  "doc.text": "description",
+  "doc.text.fill": "description",
+  "doc.fill": "insert-drive-file",
+  "list.bullet": "list",
+  "list.bullet.clipboard": "assignment",
+  // 시설
+  "mappin": "place",
+  "mappin.circle.fill": "location-on",
+  "clock": "access-time",
+  "clock.fill": "access-time-filled",
+  // 회의
+  "note.text": "notes",
+  "sparkles": "auto-awesome",
+  "person.2": "group",
+  "person.2.fill": "group",
+  // 상태
+  "circle": "radio-button-unchecked",
+  "circle.fill": "radio-button-checked",
+  "arrow.right": "arrow-forward",
+  "chevron.down": "expand-more",
+  "chevron.up": "expand-less",
+  "chevron.left": "chevron-left",
+  // 기타
+  "info.circle": "info",
+  "gear": "settings",
+  "bell": "notifications",
+  "bell.fill": "notifications",
+  "photo": "photo",
+  "camera": "camera-alt",
+} as unknown as IconMapping;
 
-/**
- * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.
- * This ensures a consistent look across platforms, and optimal resource usage.
- * Icon `name`s are based on SF Symbols and require manual mapping to Material Icons.
- */
 export function IconSymbol({
   name,
   size = 24,
