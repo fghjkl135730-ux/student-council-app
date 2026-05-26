@@ -15,7 +15,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { useApp } from '@/lib/store/AppContext';
 import { useColors } from '@/hooks/use-colors';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { ChecklistItemKey } from '@/lib/types';
+import { ChecklistItemKey, Department } from '@/lib/types';
 import { CHECKLIST_ITEMS, DEPARTMENTS } from '@/lib/constants';
 
 const CHECKLIST_KEYS = Object.keys(CHECKLIST_ITEMS) as ChecklistItemKey[];
@@ -178,7 +178,7 @@ export default function CreateEventScreen() {
           <View style={styles.checklistContainer}>
             {CHECKLIST_KEYS.map((key) => {
               const item = CHECKLIST_ITEMS[key];
-              const dept = DEPARTMENTS[item.department];
+              const dept = item.department ? DEPARTMENTS[item.department as Department] : null;
               const isSelected = checklist.includes(key);
 
               return (
@@ -210,10 +210,12 @@ export default function CreateEventScreen() {
                       {item.label}
                     </Text>
                     <View style={styles.checklistMeta}>
-                      <View style={[styles.deptBadge, { backgroundColor: dept.color + '18' }]}>
-                        <View style={[styles.deptDot, { backgroundColor: dept.color }]} />
-                        <Text style={[styles.deptText, { color: dept.color }]}>{dept.name}</Text>
-                      </View>
+                      {dept ? (
+                        <View style={[styles.deptBadge, { backgroundColor: dept.color + '18' }]}>
+                          <View style={[styles.deptDot, { backgroundColor: dept.color }]} />
+                          <Text style={[styles.deptText, { color: dept.color }]}>{dept.name}</Text>
+                        </View>
+                      ) : null}
                       {item.autoRegisterFacility && (
                         <View style={[styles.autoBadge, { backgroundColor: '#10B981' + '18' }]}>
                           <Text style={[styles.autoText, { color: '#10B981' }]}>
@@ -237,7 +239,8 @@ export default function CreateEventScreen() {
             </Text>
             {checklist.map((key) => {
               const item = CHECKLIST_ITEMS[key];
-              const dept = DEPARTMENTS[item.department];
+              const dept = item.department ? DEPARTMENTS[item.department as Department] : null;
+              if (!dept) return null;
               return (
                 <View key={key} style={styles.summaryItem}>
                   <View style={[styles.summaryDot, { backgroundColor: dept.color }]} />
