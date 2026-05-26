@@ -18,7 +18,7 @@ export interface ThemeColors {
 }
 
 export const THEMES: Record<ThemeName, { name: string; colors: ThemeColors }> = {
-  // 봄: 따뜻한 코랄, 크림, 연한 복숭아
+  // 봄: #ffb5a7, #fcd5ce, #f8edeb
   spring: {
     name: '봄',
     colors: {
@@ -34,7 +34,7 @@ export const THEMES: Record<ThemeName, { name: string; colors: ThemeColors }> = 
     },
   },
 
-  // 여름: 밝은 파랑, 하늘색, 연한 하늘색
+  // 여름: #0077b6, #00b4d8, #90e0ef
   summer: {
     name: '여름',
     colors: {
@@ -50,7 +50,7 @@ export const THEMES: Record<ThemeName, { name: string; colors: ThemeColors }> = 
     },
   },
 
-  // 가을: 따뜻한 빨강, 주황, 노랑
+  // 가을: #9f2d2d, #c14c2f, #ffb452
   autumn: {
     name: '가을',
     colors: {
@@ -66,7 +66,7 @@ export const THEMES: Record<ThemeName, { name: string; colors: ThemeColors }> = 
     },
   },
 
-  // 겨울: 어두운 네이비, 슬레이트, 연한 회색
+  // 겨울: #0f172a, #64748b, #e2e8f0
   winter: {
     name: '겨울',
     colors: {
@@ -82,7 +82,7 @@ export const THEMES: Record<ThemeName, { name: string; colors: ThemeColors }> = 
     },
   },
 
-  // 푸름: 밝은 민트, 초록, 진한 초록
+  // 푸름: #dcfce7, #76c694, #398e58
   azure: {
     name: '푸름',
     colors: {
@@ -98,7 +98,7 @@ export const THEMES: Record<ThemeName, { name: string; colors: ThemeColors }> = 
     },
   },
 
-  // 꿈결: 연한 보라, 연한 핑크, 밝은 핑크
+  // 꿈결: #7540bf, #be82c9, #f2c0dd
   dream: {
     name: '꿈결',
     colors: {
@@ -114,7 +114,7 @@ export const THEMES: Record<ThemeName, { name: string; colors: ThemeColors }> = 
     },
   },
 
-  // 설렘: 매우 밝은 핑크, 밝은 핑크, 따뜻한 핑크
+  // 설렘: #fff0f3, #ffccd5, #ff85a1
   flutter: {
     name: '설렘',
     colors: {
@@ -130,7 +130,7 @@ export const THEMES: Record<ThemeName, { name: string; colors: ThemeColors }> = 
     },
   },
 
-  // 파스텔: 연한 핑크, 연한 노랑, 연한 민트
+  // 파스텔: #ffccd5, #fef08a, #dcfce7
   pastel: {
     name: '파스텔',
     colors: {
