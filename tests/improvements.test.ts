@@ -284,8 +284,9 @@ describe('Improvements v1.1', () => {
       };
 
       expect(finalEvent.tasks).toHaveLength(2);
-      expect(finalEvent.tasks[0].source).toBe('meeting');
-      expect(finalEvent.tasks[1].source).toBeUndefined();
+      expect(finalEvent.tasks[0].meetingId).toBe('meeting_001');
+      expect(finalEvent.tasks[0].deadline).toBe('2025-06-05');
+      expect(finalEvent.tasks[1].title).toBe('현장 정리');
     });
   });
 });

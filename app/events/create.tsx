@@ -41,6 +41,28 @@ export default function CreateEventScreen() {
     );
   };
 
+  // 날짜 자동 포맷팅: 8자 입력 시 YYYY-MM-DD 형식으로 변환
+  const handleDateChange = (text: string) => {
+    const cleaned = text.replace(/[^0-9]/g, '');
+    if (cleaned.length === 8) {
+      const formatted = `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`;
+      setDate(formatted);
+    } else {
+      setDate(text);
+    }
+  };
+
+  // 시간 자동 포맷팅: 4자 입력 시 HH:mm 형식으로 변환
+  const handleTimeChange = (text: string) => {
+    const cleaned = text.replace(/[^0-9]/g, '');
+    if (cleaned.length === 4) {
+      const formatted = `${cleaned.slice(0, 2)}:${cleaned.slice(2, 4)}`;
+      setTime(formatted);
+    } else {
+      setTime(text);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!name.trim()) {
       Alert.alert('입력 오류', '행사 이름을 입력해주세요.');
@@ -117,8 +139,8 @@ export default function CreateEventScreen() {
               label="날짜"
               icon="calendar"
               value={date}
-              onChangeText={setDate}
-              placeholder="2025-06-15"
+              onChangeText={handleDateChange}
+              placeholder="20250615 또는 2025-06-15"
               colors={colors}
               keyboardType="numbers-and-punctuation"
             />
@@ -127,8 +149,8 @@ export default function CreateEventScreen() {
               label="시간"
               icon="clock"
               value={time}
-              onChangeText={setTime}
-              placeholder="14:00"
+              onChangeText={handleTimeChange}
+              placeholder="1400 또는 14:00"
               colors={colors}
               keyboardType="numbers-and-punctuation"
             />

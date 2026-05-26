@@ -8,6 +8,7 @@ import {
   Alert,
   Platform,
   TextInput,
+  Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -24,8 +25,10 @@ export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const router = useRouter();
-  const { state, updateTaskStatus, deleteEvent, addTaskToEvent } = useApp();
+  const { state, updateTaskStatus, deleteEvent, addTaskToEvent, updateTask, deleteTask } = useApp();
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [selectedDept, setSelectedDept] = useState<Department>('planning');
   const [taskTitle, setTaskTitle] = useState('');
 
@@ -49,50 +52,75 @@ export default function EventDetailScreen() {
     return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
   };
 
+  const handleStatusChange = (task: Task) => {
+    const currentIndex = STATUS_ORDER.indexOf(task.status);
+    const nextStatus = STATUS_ORDER[(currentIndex + 1) % STATUS_ORDER.length];
+    updateTaskStatus(event.id, task.id, nextStatus);
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
   const handleDeleteEvent = () => {
-    Alert.alert('행사 삭제', `"${event.name}" 행사를 삭제하시겠습니까?`, [
-      { text: '취소', style: 'cancel' },
+    Alert.alert('행사 삭제', '정말 이 행사를 삭제하시겠습니까?', [
+      { text: '취소', onPress: () => {} },
       {
         text: '삭제',
-        style: 'destructive',
         onPress: () => {
           deleteEvent(event.id);
           router.back();
         },
+        style: 'destructive',
       },
     ]);
   };
 
-  const handleStatusChange = (task: Task) => {
-    const currentIdx = STATUS_ORDER.indexOf(task.status);
-    const nextStatus = STATUS_ORDER[(currentIdx + 1) % STATUS_ORDER.length];
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    updateTaskStatus(event.id, task.id, nextStatus);
-  };
-
   const handleAddTask = () => {
     if (!taskTitle.trim()) {
-      Alert.alert('입력 오류', '업무명을 입력해주세요.');
+      Alert.alert('입력 오류', '업무 제목을 입력해주세요.');
       return;
     }
-    addTaskToEvent(event.id, {
-      title: taskTitle.trim(),
-      department: selectedDept,
-    });
+    addTaskToEvent(event.id, { title: taskTitle.trim(), department: selectedDept });
     setTaskTitle('');
     setShowAddTaskModal(false);
-    if (Platform.OS !== 'web') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setSelectedDept('planning');
+  };
+
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setTaskTitle(task.title);
+    setSelectedDept(task.department);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateTask = () => {
+    if (!editingTask || !taskTitle.trim()) {
+      Alert.alert('입력 오류', '업무 제목을 입력해주세요.');
+      return;
     }
+    updateTask(event.id, editingTask.id, { title: taskTitle.trim(), department: selectedDept });
+    setTaskTitle('');
+    setShowEditModal(false);
+    setEditingTask(null);
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    Alert.alert('업무 삭제', '정말 이 업무를 삭제하시겠습니까?', [
+      { text: '취소', onPress: () => {} },
+      {
+        text: '삭제',
+        onPress: () => {
+          deleteTask(event.id, taskId);
+        },
+        style: 'destructive',
+      },
+    ]);
   };
 
   // 부서별로 업무 그룹화
-  const tasksByDept = event.tasks.reduce(
-    (acc, task) => {
-      if (!acc[task.department]) acc[task.department] = [];
-      acc[task.department].push(task);
+  const tasksByDept = Object.entries(DEPARTMENTS).reduce(
+    (acc, [key]) => {
+      acc[key] = event.tasks.filter((t) => t.department === key);
       return acc;
     },
     {} as Record<string, Task[]>
@@ -204,30 +232,53 @@ export default function EventDetailScreen() {
                 </View>
                 {tasks.map((task) => {
                   const statusInfo = TASK_STATUS_LABELS[task.status];
+                  const isManualTask = !task.checklistKey;
                   return (
-                    <TouchableOpacity
-                      key={task.id}
-                      style={[
-                        styles.taskCard,
-                        {
-                          backgroundColor: colors.surface,
-                          borderColor: colors.border,
-                          borderLeftColor: dept.color,
-                        },
-                      ]}
-                      onPress={() => handleStatusChange(task)}
-                    >
-                      <View style={styles.taskContent}>
-                        <Text style={[styles.taskTitle, { color: colors.foreground }]}>
-                          {task.title}
-                        </Text>
-                      </View>
-                      <View style={[styles.statusBadge, { backgroundColor: statusInfo.bgColor }]}>
-                        <Text style={[styles.statusText, { color: statusInfo.color }]}>
-                          {statusInfo.label}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
+                    <View key={task.id}>
+                      <TouchableOpacity
+                        style={[
+                          styles.taskCard,
+                          {
+                            backgroundColor: colors.surface,
+                            borderColor: colors.border,
+                            borderLeftColor: dept.color,
+                          },
+                        ]}
+                        onPress={() => handleStatusChange(task)}
+                      >
+                        <View style={styles.taskContent}>
+                          <Text style={[styles.taskTitle, { color: colors.foreground }]}>
+                            {task.title}
+                          </Text>
+                          {task.meetingId && (
+                            <Text style={[styles.taskMeta, { color: colors.muted }]}>회의록 연동</Text>
+                          )}
+                        </View>
+                        <View style={[styles.statusBadge, { backgroundColor: statusInfo.bgColor }]}>
+                          <Text style={[styles.statusText, { color: statusInfo.color }]}>
+                            {statusInfo.label}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                      {isManualTask && (
+                        <View style={styles.taskActions}>
+                          <TouchableOpacity
+                            onPress={() => handleEditTask(task)}
+                            style={[styles.actionBtn, { backgroundColor: colors.primary + '12' }]}
+                          >
+                            <IconSymbol name="pencil" size={14} color={colors.primary} />
+                            <Text style={[styles.actionBtnText, { color: colors.primary }]}>수정</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => handleDeleteTask(task.id)}
+                            style={[styles.actionBtn, { backgroundColor: colors.error + '12' }]}
+                          >
+                            <IconSymbol name="trash" size={14} color={colors.error} />
+                            <Text style={[styles.actionBtnText, { color: colors.error }]}>삭제</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
                   );
                 })}
               </View>
@@ -243,7 +294,7 @@ export default function EventDetailScreen() {
       </ScrollView>
 
       {/* 업무 추가 모달 */}
-      {showAddTaskModal && (
+      <Modal visible={showAddTaskModal} transparent animationType="slide" onRequestClose={() => setShowAddTaskModal(false)}>
         <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
           <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
             <View style={styles.modalHeader}>
@@ -283,48 +334,104 @@ export default function EventDetailScreen() {
               </View>
             </View>
 
-            {/* 업무명 입력 */}
+            {/* 업무 제목 입력 */}
             <View style={styles.modalSection}>
-              <Text style={[styles.modalLabel, { color: colors.foreground }]}>업무명</Text>
-              <View
-                style={[
-                  styles.modalInput,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                <TextInput
-                  style={[styles.input, { color: colors.foreground }]}
-                  placeholder="업무명을 입력해주세요"
-                  placeholderTextColor={colors.muted}
-                  value={taskTitle}
-                  onChangeText={setTaskTitle}
-                  multiline
-                  maxLength={100}
-                />
-              </View>
+              <Text style={[styles.modalLabel, { color: colors.foreground }]}>업무 제목</Text>
+              <TextInput
+                style={[styles.textInput, { color: colors.foreground, borderColor: colors.border }]}
+                placeholder="업무 제목을 입력하세요"
+                placeholderTextColor={colors.muted}
+                value={taskTitle}
+                onChangeText={setTaskTitle}
+                returnKeyType="done"
+              />
             </View>
 
-            {/* 액션 버튼 */}
-            <View style={styles.modalActions}>
+            {/* 버튼 */}
+            <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: colors.border }]}
+                style={[styles.cancelBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 onPress={() => setShowAddTaskModal(false)}
               >
-                <Text style={[styles.modalBtnText, { color: colors.foreground }]}>취소</Text>
+                <Text style={[styles.cancelBtnText, { color: colors.foreground }]}>취소</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: colors.primary }]}
-                onPress={handleAddTask}
-              >
-                <Text style={[styles.modalBtnText, { color: '#fff' }]}>추가</Text>
+              <TouchableOpacity style={[styles.submitBtn, { backgroundColor: colors.primary }]} onPress={handleAddTask}>
+                <Text style={styles.submitBtnText}>추가</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
-      )}
+      </Modal>
+
+      {/* 업무 수정 모달 */}
+      <Modal visible={showEditModal} transparent animationType="slide" onRequestClose={() => setShowEditModal(false)}>
+        <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>업무 수정</Text>
+              <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                <IconSymbol name="xmark" size={24} color={colors.muted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* 부서 선택 */}
+            <View style={styles.modalSection}>
+              <Text style={[styles.modalLabel, { color: colors.foreground }]}>부서 선택</Text>
+              <View style={styles.deptGrid}>
+                {(Object.entries(DEPARTMENTS) as [Department, any][]).map(([key, dept]) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={[
+                      styles.deptOption,
+                      {
+                        backgroundColor: selectedDept === key ? colors.primary + '20' : colors.surface,
+                        borderColor: selectedDept === key ? colors.primary : colors.border,
+                      },
+                    ]}
+                    onPress={() => setSelectedDept(key)}
+                  >
+                    <View style={[styles.deptOptionDot, { backgroundColor: dept.color }]} />
+                    <Text
+                      style={[
+                        styles.deptOptionText,
+                        { color: selectedDept === key ? colors.primary : colors.foreground },
+                      ]}
+                    >
+                      {dept.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* 업무 제목 입력 */}
+            <View style={styles.modalSection}>
+              <Text style={[styles.modalLabel, { color: colors.foreground }]}>업무 제목</Text>
+              <TextInput
+                style={[styles.textInput, { color: colors.foreground, borderColor: colors.border }]}
+                placeholder="업무 제목을 입력하세요"
+                placeholderTextColor={colors.muted}
+                value={taskTitle}
+                onChangeText={setTaskTitle}
+                returnKeyType="done"
+              />
+            </View>
+
+            {/* 버튼 */}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.cancelBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                onPress={() => setShowEditModal(false)}
+              >
+                <Text style={[styles.cancelBtnText, { color: colors.foreground }]}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.submitBtn, { backgroundColor: colors.primary }]} onPress={handleUpdateTask}>
+                <Text style={styles.submitBtnText}>저장</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -343,53 +450,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
   deleteBtn: {
     width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  notFound: {
+  headerTitle: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  notFoundText: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   infoCard: {
     margin: 16,
     padding: 16,
     borderRadius: 14,
     borderWidth: 1,
-    gap: 10,
+    gap: 12,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   infoText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '500',
   },
   progressSection: {
-    marginTop: 6,
+    marginTop: 8,
+    gap: 8,
   },
   progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'center',
   },
   progressLabel: {
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: '600',
   },
   progressCount: {
     fontSize: 13,
@@ -406,7 +506,7 @@ const styles = StyleSheet.create({
   },
   docSection: {
     paddingHorizontal: 16,
-    marginBottom: 8,
+    marginTop: 20,
   },
   sectionTitle: {
     fontSize: 12,
@@ -415,32 +515,45 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 10,
   },
-  sectionHint: {
-    fontSize: 12,
-    marginTop: -6,
-    marginBottom: 10,
-  },
   docButtons: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
   docBtn: {
     flex: 1,
     alignItems: 'center',
     padding: 16,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     gap: 6,
   },
   docBtnTitle: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
   },
   docBtnSub: {
-    fontSize: 12,
+    fontSize: 11,
   },
   taskSection: {
     paddingHorizontal: 16,
+    marginTop: 20,
+  },
+  taskSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 12,
+  },
+  sectionHint: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  addTaskBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   deptGroup: {
     marginBottom: 16,
@@ -449,127 +562,113 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
-    gap: 8,
+    gap: 10,
   },
   deptColorBar: {
     width: 4,
-    height: 18,
+    height: 24,
     borderRadius: 2,
   },
   deptName: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
   },
   taskCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
-    borderRadius: 12,
+    padding: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderLeftWidth: 4,
     marginBottom: 8,
-    gap: 12,
+    gap: 10,
   },
   taskContent: {
     flex: 1,
   },
-  taskTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   taskTitle: {
     fontSize: 14,
     fontWeight: '600',
-    flex: 1,
-  },
-  sourceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
-    gap: 2,
-  },
-  sourceText: {
-    fontSize: 11,
-    fontWeight: '600',
+    marginBottom: 2,
   },
   taskMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-  taskDeadline: {
-    fontSize: 12,
+    fontSize: 11,
   },
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 8,
-    minWidth: 60,
-    alignItems: 'center',
+    borderRadius: 6,
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  taskActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 4,
+  },
+  actionBtnText: {
+    fontSize: 11,
     fontWeight: '600',
   },
   emptyTasks: {
-    padding: 24,
     alignItems: 'center',
+    paddingVertical: 40,
   },
   emptyText: {
     fontSize: 14,
   },
-  taskSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 12,
-  },
-  addTaskBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+  notFound: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 16,
   },
+  notFoundText: {
+    fontSize: 16,
+  },
+  // 모달 스타일
   modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
+    flex: 1,
     justifyContent: 'flex-end',
   },
   modalContent: {
-    width: '100%',
+    maxHeight: '90%',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    maxHeight: '80%',
+    paddingBottom: 32,
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
   },
   modalSection: {
-    marginBottom: 20,
-    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   modalLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
+    marginBottom: 10,
   },
   deptGrid: {
     flexDirection: 'row',
@@ -578,14 +677,14 @@ const styles = StyleSheet.create({
   },
   deptOption: {
     flex: 1,
-    minWidth: '48%',
+    minWidth: '30%',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    gap: 8,
+    gap: 6,
   },
   deptOptionDot: {
     width: 8,
@@ -593,35 +692,42 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   deptOptionText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    flex: 1,
   },
-  modalInput: {
-    borderRadius: 8,
+  textInput: {
     borderWidth: 1,
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    minHeight: 80,
-  },
-  input: {
     fontSize: 14,
-    fontWeight: '500',
   },
-  modalActions: {
+  modalButtons: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 20,
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
-  modalBtn: {
+  cancelBtn: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1,
   },
-  modalBtnText: {
+  cancelBtnText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
+  },
+  submitBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  submitBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

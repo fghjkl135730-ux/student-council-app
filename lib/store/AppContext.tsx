@@ -39,6 +39,8 @@ type AppAction =
   | { type: 'DELETE_MEETING'; payload: string }
   | { type: 'ADD_ACTION_ITEMS_TO_EVENT'; payload: { eventId: string; meetingId: string; actionItems: Array<{ task: string; assignee: string; deadline?: string; department?: string }> } }
   | { type: 'ADD_TASK_TO_EVENT'; payload: { eventId: string; taskData: { title: string; department: Department } } }
+  | { type: 'UPDATE_TASK'; payload: { eventId: string; taskId: string; taskData: { title: string; department: Department } } }
+  | { type: 'DELETE_TASK'; payload: { eventId: string; taskId: string } }
   | { type: 'SET_LOADING'; payload: boolean };
 
 // ===== 리듀서 =====
@@ -178,6 +180,40 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
+    case 'UPDATE_TASK': {
+      const { eventId, taskId, taskData } = action.payload;
+      return {
+        ...state,
+        events: state.events.map((e) => {
+          if (e.id !== eventId) return e;
+          return {
+            ...e,
+            tasks: e.tasks.map((t) =>
+              t.id === taskId
+                ? { ...t, title: taskData.title, department: taskData.department, updatedAt: new Date().toISOString() }
+                : t
+            ),
+            updatedAt: new Date().toISOString(),
+          };
+        }),
+      };
+    }
+
+    case 'DELETE_TASK': {
+      const { eventId, taskId } = action.payload;
+      return {
+        ...state,
+        events: state.events.map((e) => {
+          if (e.id !== eventId) return e;
+          return {
+            ...e,
+            tasks: e.tasks.filter((t) => t.id !== taskId),
+            updatedAt: new Date().toISOString(),
+          };
+        }),
+      };
+    }
+
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
 
@@ -216,6 +252,8 @@ interface AppContextValue {
   deleteMeeting: (id: string) => void;
   addActionItemsToEvent: (eventId: string, meetingId: string, actionItems: Array<{ task: string; assignee: string; deadline?: string; department?: string }>) => void;
   addTaskToEvent: (eventId: string, taskData: { title: string; department: Department }) => void;
+  updateTask: (eventId: string, taskId: string, taskData: { title: string; department: Department }) => void;
+  deleteTask: (eventId: string, taskId: string) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -371,6 +409,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const updateTask = useCallback(
+    (eventId: string, taskId: string, taskData: { title: string; department: Department }) => {
+      dispatch({ type: 'UPDATE_TASK', payload: { eventId, taskId, taskData } });
+    },
+    []
+  );
+
+  const deleteTask = useCallback(
+    (eventId: string, taskId: string) => {
+      dispatch({ type: 'DELETE_TASK', payload: { eventId, taskId } });
+    },
+    []
+  );
+
   return (
     <AppContext.Provider
       value={{
@@ -387,6 +439,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deleteMeeting,
         addActionItemsToEvent,
         addTaskToEvent,
+        updateTask,
+        deleteTask,
       }}
     >
       {children}
