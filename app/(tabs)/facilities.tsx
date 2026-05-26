@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ScreenContainer } from '@/components/screen-container';
@@ -11,6 +11,7 @@ import { FacilityRental, FacilityStatus } from '@/lib/types';
 export default function FacilitiesScreen() {
   const colors = useColors();
   const { state, updateFacilityStatus } = useApp();
+  const [activeTab, setActiveTab] = useState<'needed' | 'applied'>('needed');
 
   const now = new Date();
   const currentMonth = now.getMonth();
@@ -29,6 +30,11 @@ export default function FacilitiesScreen() {
   const neededCount = thisMonthFacilities.filter((f) => f.status === 'needed').length;
   const appliedCount = thisMonthFacilities.filter((f) => f.status === 'applied').length;
 
+  // 탭에 따른 필터링
+  const filteredFacilities = useMemo(() => {
+    return state.facilities.filter((f) => f.status === activeTab);
+  }, [state.facilities, activeTab]);
+
   const formatDate = (date: string) => {
     const d = new Date(date + 'T00:00:00');
     return `${d.getMonth() + 1}/${d.getDate()}`;
@@ -41,14 +47,14 @@ export default function FacilitiesScreen() {
     updateFacilityStatus(facility.id, newStatus);
   };
 
-  const handleApply = (facility: FacilityRental) => {
+  const handleApplyComplete = (facility: FacilityRental) => {
     Alert.alert(
-      '대여 신청',
-      `"${facility.location}" 장소 대여를 신청하시겠습니까?`,
+      '대여 신청 완료',
+      `"${facility.location}" 장소 대여를 신청 완료하시겠습니까?`,
       [
         { text: '취소', style: 'cancel' },
         {
-          text: '신청',
+          text: '완료',
           onPress: () => handleStatusChange(facility, 'applied'),
         },
       ]
@@ -146,22 +152,62 @@ export default function FacilitiesScreen() {
           </View>
         )}
 
-        {/* 전체 시설 대여 카드 목록 */}
-        <View style={styles.cardsSection}>
-          <Text style={[styles.sectionLabel, { color: colors.muted }]}>전체 대여 목록</Text>
+        {/* 탭 필터 */}
+        <View style={styles.tabsSection}>
+          <View style={[styles.tabs, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <TouchableOpacity
+              style={[
+                styles.tab,
+                activeTab === 'needed' && [styles.tabActive, { borderBottomColor: colors.primary }],
+                activeTab !== 'needed' && { borderBottomColor: colors.border },
+              ]}
+              onPress={() => setActiveTab('needed')}
+            >
+              <Text
+                style={[
+                  styles.tabLabel,
+                  { color: activeTab === 'needed' ? colors.primary : colors.muted },
+                ]}
+              >
+                대여 필요 ({neededCount})
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.tab,
+                activeTab === 'applied' && [styles.tabActive, { borderBottomColor: colors.primary }],
+                activeTab !== 'applied' && { borderBottomColor: colors.border },
+              ]}
+              onPress={() => setActiveTab('applied')}
+            >
+              <Text
+                style={[
+                  styles.tabLabel,
+                  { color: activeTab === 'applied' ? colors.primary : colors.muted },
+                ]}
+              >
+                신청 완료 ({appliedCount})
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-          {state.facilities.length === 0 ? (
+        {/* 필터링된 시설 대여 카드 목록 */}
+        <View style={styles.cardsSection}>
+          {filteredFacilities.length === 0 ? (
             <View style={styles.emptyContainer}>
               <IconSymbol name="building.2" size={48} color={colors.border} />
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                등록된 시설 대여가 없습니다
+                {activeTab === 'needed' ? '대여 필요한 시설이 없습니다' : '신청 완료한 시설이 없습니다'}
               </Text>
               <Text style={[styles.emptySubtitle, { color: colors.muted }]}>
-                행사 생성 시 '장소 대여' 항목을 선택하면{'\n'}자동으로 등록됩니다
+                {activeTab === 'needed'
+                  ? '행사 생성 시 "장소 대여" 항목을 선택하면\n자동으로 등록됩니다'
+                  : '대여 신청을 완료하면 여기에 표시됩니다'}
               </Text>
             </View>
           ) : (
-            state.facilities.map((facility) => {
+            filteredFacilities.map((facility) => {
               const statusInfo = FACILITY_STATUS_LABELS[facility.status];
               return (
                 <View
@@ -204,9 +250,9 @@ export default function FacilitiesScreen() {
                     {facility.status === 'needed' && (
                       <TouchableOpacity
                         style={[styles.actionBtn, { backgroundColor: colors.primary }]}
-                        onPress={() => handleApply(facility)}
+                        onPress={() => handleApplyComplete(facility)}
                       >
-                        <Text style={styles.actionBtnText}>대여 신청</Text>
+                        <Text style={styles.actionBtnText}>대여 신청 완료</Text>
                       </TouchableOpacity>
                     )}
                     {facility.status === 'applied' && (
@@ -248,38 +294,38 @@ const styles = StyleSheet.create({
   },
   summarySection: {
     padding: 16,
-    paddingBottom: 8,
+    gap: 12,
   },
   sectionLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 10,
   },
   summaryCards: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
   summaryCard: {
     flex: 1,
-    alignItems: 'center',
-    padding: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     borderRadius: 12,
     borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   summaryNum: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
   },
   summaryLabel: {
     fontSize: 11,
     fontWeight: '600',
-    marginTop: 2,
+    marginTop: 4,
   },
   tableSection: {
     paddingHorizontal: 16,
-    marginBottom: 8,
+    paddingVertical: 12,
+    gap: 8,
   },
   table: {
     borderRadius: 12,
@@ -291,57 +337,82 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 10,
+    gap: 8,
   },
   tableHeader: {
     paddingVertical: 8,
   },
   tableHeaderText: {
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    fontSize: 12,
+    fontWeight: '700',
   },
   tableCell: {
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: '500',
   },
   tableDivider: {
     height: 1,
-    marginHorizontal: 12,
   },
   statusDot: {
     paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: 6,
-    alignSelf: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statusDotText: {
-    fontSize: 10,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  tabsSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  tabs: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+  },
+  tabActive: {
+    borderBottomWidth: 3,
+  },
+  tabLabel: {
+    fontSize: 13,
     fontWeight: '600',
   },
   cardsSection: {
-    padding: 16,
-    paddingTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
   },
   facilityCard: {
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 12,
     overflow: 'hidden',
   },
   cardHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 14,
-    paddingBottom: 10,
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 12,
   },
   locationRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    flex: 1,
+    gap: 8,
   },
   locationText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     flex: 1,
   },
@@ -356,7 +427,7 @@ const styles = StyleSheet.create({
   },
   cardMeta: {
     paddingHorizontal: 14,
-    paddingBottom: 12,
+    paddingVertical: 8,
     gap: 6,
   },
   metaRow: {
@@ -365,36 +436,41 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   metaText: {
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: '500',
   },
   cardActions: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     borderTopWidth: 1,
-    padding: 10,
   },
   actionBtn: {
+    flex: 1,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   actionBtnText: {
     color: '#fff',
+    fontSize: 13,
     fontWeight: '700',
-    fontSize: 14,
   },
   emptyContainer: {
     alignItems: 'center',
-    paddingTop: 40,
-    paddingHorizontal: 32,
-    gap: 10,
+    justifyContent: 'center',
+    paddingVertical: 48,
+    gap: 12,
   },
   emptyTitle: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '700',
-    marginTop: 8,
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
   },
 });

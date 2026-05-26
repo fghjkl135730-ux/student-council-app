@@ -38,6 +38,7 @@ type AppAction =
   | { type: 'UPDATE_MEETING'; payload: Meeting }
   | { type: 'DELETE_MEETING'; payload: string }
   | { type: 'ADD_ACTION_ITEMS_TO_EVENT'; payload: { eventId: string; meetingId: string; actionItems: Array<{ task: string; assignee: string; deadline?: string; department?: string }> } }
+  | { type: 'ADD_TASK_TO_EVENT'; payload: { eventId: string; taskData: { title: string; department: Department } } }
   | { type: 'SET_LOADING'; payload: boolean };
 
 // ===== 리듀서 =====
@@ -150,6 +151,30 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
+    case 'ADD_TASK_TO_EVENT': {
+      const { eventId, taskData } = action.payload;
+      return {
+        ...state,
+        events: state.events.map((e) => {
+          if (e.id !== eventId) return e;
+          const newTask: Task = {
+            id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+            eventId,
+            title: taskData.title,
+            department: taskData.department,
+            status: 'pending' as const,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          return {
+            ...e,
+            tasks: [...e.tasks, newTask],
+            updatedAt: new Date().toISOString(),
+          };
+        }),
+      };
+    }
+
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
 
@@ -187,6 +212,7 @@ interface AppContextValue {
   updateMeeting: (meeting: Meeting) => void;
   deleteMeeting: (id: string) => void;
   addActionItemsToEvent: (eventId: string, meetingId: string, actionItems: Array<{ task: string; assignee: string; deadline?: string; department?: string }>) => void;
+  addTaskToEvent: (eventId: string, taskData: { title: string; department: Department }) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -333,6 +359,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const addTaskToEvent = useCallback(
+    (eventId: string, taskData: { title: string; department: Department }) => {
+      dispatch({ type: 'ADD_TASK_TO_EVENT', payload: { eventId, taskData } });
+    },
+    []
+  );
+
   return (
     <AppContext.Provider
       value={{
@@ -348,6 +381,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateMeeting,
         deleteMeeting,
         addActionItemsToEvent,
+        addTaskToEvent,
       }}
     >
       {children}

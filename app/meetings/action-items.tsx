@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -52,6 +52,13 @@ export default function ActionItemsScreen() {
     return state.events.filter((e) => e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
   }, [state.events]);
 
+  // 초기 로드 시 모든 액션 아이템 자동 선택
+  React.useEffect(() => {
+    if (actionItems.length > 0 && selectedActionItems.size === 0) {
+      setSelectedActionItems(new Set(actionItems.map((_, i) => i)));
+    }
+  }, [actionItems, selectedActionItems.size]);
+
   const handleToggleActionItem = (index: number) => {
     const newSet = new Set(selectedActionItems);
     if (newSet.has(index)) {
@@ -82,13 +89,19 @@ export default function ActionItemsScreen() {
 
     const selectedItems = Array.from(selectedActionItems).map((i) => actionItems[i]);
 
-    // 회의록 저장
+    // 회의록 저장 (AI 요약 정보 포함)
     const meetingId = params.meetingId || Date.now().toString(36) + Math.random().toString(36).substr(2);
     const meeting = {
       id: meetingId,
       title: params.meetingTitle || '회의록',
       date: params.meetingDate || new Date().toISOString().split('T')[0],
       content: params.meetingContent || '',
+      summary: {
+        keyPoints: [],
+        decisions: [],
+        actionItems: actionItems,
+        generatedAt: new Date().toISOString(),
+      },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

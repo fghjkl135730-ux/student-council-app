@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
+  TextInput,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -15,7 +16,7 @@ import { useApp } from '@/lib/store/AppContext';
 import { useColors } from '@/hooks/use-colors';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { DEPARTMENTS, TASK_STATUS_LABELS } from '@/lib/constants';
-import { Task, TaskStatus } from '@/lib/types';
+import { Task, TaskStatus, Department } from '@/lib/types';
 
 const STATUS_ORDER: TaskStatus[] = ['pending', 'in_progress', 'done'];
 
@@ -23,7 +24,10 @@ export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const router = useRouter();
-  const { state, updateTaskStatus, deleteEvent } = useApp();
+  const { state, updateTaskStatus, deleteEvent, addTaskToEvent } = useApp();
+  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [selectedDept, setSelectedDept] = useState<Department>('planning');
+  const [taskTitle, setTaskTitle] = useState('');
 
   const event = state.events.find((e) => e.id === id);
 
@@ -66,6 +70,22 @@ export default function EventDetailScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     updateTaskStatus(event.id, task.id, nextStatus);
+  };
+
+  const handleAddTask = () => {
+    if (!taskTitle.trim()) {
+      Alert.alert('입력 오류', '업무명을 입력해주세요.');
+      return;
+    }
+    addTaskToEvent(event.id, {
+      title: taskTitle.trim(),
+      department: selectedDept,
+    });
+    setTaskTitle('');
+    setShowAddTaskModal(false);
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
   };
 
   // 부서별로 업무 그룹화
@@ -159,10 +179,20 @@ export default function EventDetailScreen() {
 
         {/* 부서별 업무 현황 */}
         <View style={styles.taskSection}>
-          <Text style={[styles.sectionTitle, { color: colors.muted }]}>부서별 업무 현황</Text>
-          <Text style={[styles.sectionHint, { color: colors.muted }]}>
-            업무 카드를 탭하면 상태가 변경됩니다
-          </Text>
+          <View style={styles.taskSectionHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.sectionTitle, { color: colors.muted }]}>부서별 업무 현황</Text>
+              <Text style={[styles.sectionHint, { color: colors.muted }]}>
+                업무 카드를 탭하면 상태가 변경됩니다
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.addTaskBtn, { backgroundColor: colors.primary }]}
+              onPress={() => setShowAddTaskModal(true)}
+            >
+              <IconSymbol name="plus" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
 
           {Object.entries(tasksByDept).map(([deptKey, tasks]) => {
             const dept = DEPARTMENTS[deptKey as keyof typeof DEPARTMENTS];
@@ -211,6 +241,90 @@ export default function EventDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* 업무 추가 모달 */}
+      {showAddTaskModal && (
+        <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>업무 추가</Text>
+              <TouchableOpacity onPress={() => setShowAddTaskModal(false)}>
+                <IconSymbol name="xmark" size={24} color={colors.muted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* 부서 선택 */}
+            <View style={styles.modalSection}>
+              <Text style={[styles.modalLabel, { color: colors.foreground }]}>부서 선택</Text>
+              <View style={styles.deptGrid}>
+                {(Object.entries(DEPARTMENTS) as [Department, any][]).map(([key, dept]) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={[
+                      styles.deptOption,
+                      {
+                        backgroundColor: selectedDept === key ? colors.primary + '20' : colors.surface,
+                        borderColor: selectedDept === key ? colors.primary : colors.border,
+                      },
+                    ]}
+                    onPress={() => setSelectedDept(key)}
+                  >
+                    <View style={[styles.deptOptionDot, { backgroundColor: dept.color }]} />
+                    <Text
+                      style={[
+                        styles.deptOptionText,
+                        { color: selectedDept === key ? colors.primary : colors.foreground },
+                      ]}
+                    >
+                      {dept.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* 업무명 입력 */}
+            <View style={styles.modalSection}>
+              <Text style={[styles.modalLabel, { color: colors.foreground }]}>업무명</Text>
+              <View
+                style={[
+                  styles.modalInput,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <TextInput
+                  style={[styles.input, { color: colors.foreground }]}
+                  placeholder="업무명을 입력해주세요"
+                  placeholderTextColor={colors.muted}
+                  value={taskTitle}
+                  onChangeText={setTaskTitle}
+                  multiline
+                  maxLength={100}
+                />
+              </View>
+            </View>
+
+            {/* 액션 버튼 */}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: colors.border }]}
+                onPress={() => setShowAddTaskModal(false)}
+              >
+                <Text style={[styles.modalBtnText, { color: colors.foreground }]}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: colors.primary }]}
+                onPress={handleAddTask}
+              >
+                <Text style={[styles.modalBtnText, { color: '#fff' }]}>추가</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </ScreenContainer>
   );
 }
@@ -407,5 +521,107 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
+  },
+  taskSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 12,
+  },
+  addTaskBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    width: '100%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  modalSection: {
+    marginBottom: 20,
+    gap: 10,
+  },
+  modalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  deptGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  deptOption: {
+    flex: 1,
+    minWidth: '48%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 8,
+  },
+  deptOptionDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  deptOptionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
+  },
+  modalInput: {
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 80,
+  },
+  input: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 20,
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
