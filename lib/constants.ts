@@ -2,6 +2,8 @@ import { ChecklistItemKey, Department } from './types';
 
 // ===== 부서 정보 =====
 export const DEPARTMENTS: Record<Department, { name: string; color: string; shortName: string }> = {
+  president: { name: '회장', color: '#DC2626', shortName: '회장' },
+  vice_president: { name: '부회장', color: '#EA580C', shortName: '부회장' },
   planning: { name: '기획부', color: '#4F6AF5', shortName: '기획' },
   pr: { name: '홍보부', color: '#EC4899', shortName: '홍보' },
   admin: { name: '사무부', color: '#F59E0B', shortName: '사무' },

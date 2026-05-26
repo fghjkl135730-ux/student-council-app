@@ -37,6 +37,7 @@ export default function ActionItemsScreen() {
 
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedActionItems, setSelectedActionItems] = useState<Set<number>>(new Set());
+  const [isLinking, setIsLinking] = useState(false);
 
   const actionItems: ActionItemWithDept[] = useMemo(() => {
     if (!params.actionItems) return [];
@@ -87,6 +88,12 @@ export default function ActionItemsScreen() {
       return;
     }
 
+    // 중복 연동 방지
+    if (isLinking) {
+      return;
+    }
+    setIsLinking(true);
+
     const selectedItems = Array.from(selectedActionItems).map((i) => actionItems[i]);
 
     // 회의록 저장 (AI 요약 정보 포함)
@@ -114,16 +121,9 @@ export default function ActionItemsScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
 
-    Alert.alert('완료', `${selectedItems.length}개의 액션 아이템이 행사에 연동되었습니다.`, [
-      {
-        text: '행사 보기',
-        onPress: () => router.push(`/events/${selectedEventId}`),
-      },
-      {
-        text: '닫기',
-        onPress: () => router.back(),
-      },
-    ]);
+    // 더보기 탭으로 자동 이동
+    setIsLinking(false);
+    router.replace('/(tabs)/more');
   };
 
   return (

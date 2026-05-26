@@ -1,5 +1,7 @@
 // ===== 부서 타입 =====
 export type Department =
+  | 'president'   // 회장
+  | 'vice_president' // 부회장
   | 'planning'    // 기획부
   | 'pr'          // 홍보부
   | 'admin'       // 사무부

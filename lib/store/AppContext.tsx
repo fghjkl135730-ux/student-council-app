@@ -122,7 +122,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
 
     case 'DELETE_MEETING':
-      return { ...state, meetings: state.meetings.filter((m) => m.id !== action.payload) };
+      return {
+        ...state,
+        meetings: state.meetings.filter((m) => m.id !== action.payload),
+      };
 
     case 'ADD_ACTION_ITEMS_TO_EVENT': {
       const { eventId, meetingId, actionItems } = action.payload;
