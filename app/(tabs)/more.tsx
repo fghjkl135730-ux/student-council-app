@@ -7,12 +7,14 @@ import { useColors } from '@/hooks/use-colors';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { DEPARTMENTS } from '@/lib/constants';
 import { Department, Task } from '@/lib/types';
+import { THEMES, THEME_NAMES, ThemeName } from '@/lib/themes';
 
 export default function MoreScreen() {
   const colors = useColors();
   const router = useRouter();
   const { state } = useApp();
   const [selectedDept, setSelectedDept] = useState<Department | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   // 부서별 업무 통계
   const deptStats = Object.entries(DEPARTMENTS).map(([key, info]) => {
@@ -30,6 +32,26 @@ export default function MoreScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+        {/* 설정 섹션 */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.muted }]}>앱 설정</Text>
+          <TouchableOpacity
+            style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            onPress={() => setShowSettings(true)}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: colors.primary + '18' }]}>
+              <IconSymbol name="gear" size={22} color={colors.primary} />
+            </View>
+            <View style={styles.menuContent}>
+              <Text style={[styles.menuTitle, { color: colors.foreground }]}>색상 테마</Text>
+              <Text style={[styles.menuSubtitle, { color: colors.muted }]}>
+                8가지 테마 중 선택
+              </Text>
+            </View>
+            <IconSymbol name="chevron.right" size={18} color={colors.muted} />
+          </TouchableOpacity>
+        </View>
+
         {/* 회의록 섹션 */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.muted }]}>회의록 관리</Text>
@@ -88,6 +110,9 @@ export default function MoreScreen() {
           colors={colors}
         />
       )}
+
+      {/* 설정 모달 */}
+      {showSettings && <ThemeSettingsModal onClose={() => setShowSettings(false)} colors={colors} />}
     </ScreenContainer>
   );
 }
@@ -221,6 +246,66 @@ function TaskItem({ task, colors }: { task: Task; colors: any }) {
   );
 }
 
+function ThemeSettingsModal({ onClose, colors }: { onClose: () => void; colors: any }) {
+  return (
+    <Modal
+      visible={true}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+        <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+          {/* 헤더 */}
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <TouchableOpacity onPress={onClose}>
+              <IconSymbol name="chevron.left" size={24} color={colors.primary} />
+            </TouchableOpacity>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>색상 테마</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          {/* 테마 목록 */}
+          <ScrollView showsVerticalScrollIndicator={false} style={styles.modalBody}>
+            <View style={styles.themeGrid}>
+              {THEME_NAMES.map((themeName) => (
+                <ThemeCard key={themeName} themeName={themeName} onClose={onClose} />
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function ThemeCard({ themeName, onClose }: { themeName: ThemeName; onClose: () => void }) {
+  const theme = THEMES[themeName];
+  const { setTheme } = useApp();
+
+  const handleSelectTheme = async () => {
+    try {
+      setTheme(themeName);
+      onClose();
+    } catch (error) {
+      console.error('테마 변경 실패:', error);
+    }
+  };
+
+  return (
+    <TouchableOpacity style={styles.themeCard} onPress={handleSelectTheme} activeOpacity={0.7}>
+      {/* 색상 미리보기 */}
+      <View style={styles.themePreview}>
+        <View style={[styles.colorSwatch, { backgroundColor: theme.colors.primary }]} />
+        <View style={[styles.colorSwatch, { backgroundColor: theme.colors.success }]} />
+        <View style={[styles.colorSwatch, { backgroundColor: theme.colors.warning }]} />
+      </View>
+      {/* 테마 이름 */}
+      <Text style={styles.themeName}>{theme.name}</Text>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
@@ -335,6 +420,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 1,
   },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
   modalDeptBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -401,5 +490,35 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
+  },
+  // 테마 선택 스타일
+  themeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 20,
+  },
+  themeCard: {
+    width: '48%',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#F9FAFB',
+  },
+  themePreview: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
+    width: '100%',
+  },
+  colorSwatch: {
+    flex: 1,
+    height: 40,
+    borderRadius: 8,
+  },
+  themeName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
   },
 });

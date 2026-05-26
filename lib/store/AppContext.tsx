@@ -13,6 +13,7 @@ import {
   Department,
 } from '../types';
 import { CHECKLIST_ITEMS } from '../constants';
+import { ThemeName } from '../themes';
 
 // ===== 상태 타입 =====
 interface AppState {
@@ -20,6 +21,7 @@ interface AppState {
   facilities: FacilityRental[];
   meetings: Meeting[];
   isLoading: boolean;
+  currentTheme: ThemeName;
 }
 
 // ===== 액션 타입 =====
@@ -41,7 +43,8 @@ type AppAction =
   | { type: 'ADD_TASK_TO_EVENT'; payload: { eventId: string; taskData: { title: string; department: Department } } }
   | { type: 'UPDATE_TASK'; payload: { eventId: string; taskId: string; taskData: { title: string; department: Department } } }
   | { type: 'DELETE_TASK'; payload: { eventId: string; taskId: string } }
-  | { type: 'SET_LOADING'; payload: boolean };
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_THEME'; payload: ThemeName };
 
 // ===== 리듀서 =====
 function appReducer(state: AppState, action: AppAction): AppState {
@@ -217,6 +220,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
 
+    case 'SET_THEME':
+      return { ...state, currentTheme: action.payload };
+
     default:
       return state;
   }
@@ -228,6 +234,7 @@ const initialState: AppState = {
   facilities: [],
   meetings: [],
   isLoading: true,
+  currentTheme: 'spring',
 };
 
 // ===== Context =====
@@ -254,6 +261,7 @@ interface AppContextValue {
   addTaskToEvent: (eventId: string, taskData: { title: string; department: Department }) => void;
   updateTask: (eventId: string, taskId: string, taskData: { title: string; department: Department }) => void;
   deleteTask: (eventId: string, taskId: string) => void;
+  setTheme: (themeName: ThemeName) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -281,6 +289,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         } else {
           dispatch({ type: 'SET_LOADING', payload: false });
         }
+        // 테마 로드
+        const theme = await AsyncStorage.getItem(`${STORAGE_KEY}_theme`);
+        if (theme) {
+          dispatch({ type: 'SET_THEME', payload: theme as ThemeName });
+        }
       } catch {
         dispatch({ type: 'SET_LOADING', payload: false });
       }
@@ -297,6 +310,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             events: state.events,
             facilities: state.facilities,
             meetings: state.meetings,
+            currentTheme: state.currentTheme,
           };
           await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
         } catch {
@@ -423,6 +437,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const setTheme = useCallback((themeName: ThemeName) => {
+    dispatch({ type: 'SET_THEME', payload: themeName });
+    AsyncStorage.setItem(`${STORAGE_KEY}_theme`, themeName).catch((e) => console.error('테마 저장 실패:', e));
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -441,6 +460,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addTaskToEvent,
         updateTask,
         deleteTask,
+        setTheme,
       }}
     >
       {children}
